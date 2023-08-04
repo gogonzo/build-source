@@ -278,6 +278,18 @@ install_dependencies <- function(path = '.'){
   precache_rspm()
 
   desc <- as.data.frame(read.dcf('DESCRIPTION'))
+
+  # The following should not be needed if the remote is part of the universe
+  # However we install it anyway to avoid race conditions if the remote was just added
+  # - remotes will be overriden if are deployed to r-universe or cran 
+  remotes <- desc$Remotes
+  if(length(remotes)){
+    try({
+      remotes_repos <- split_by_comma(remotes)
+      lapply(remotes_repos, function(x){remotes::install_github(x, upgrade = FALSE)})
+    })
+  }
+
   message("Running: remotes::local_package_deps(dependencies=TRUE)")
   deps <- remotes::local_package_deps(dependencies=TRUE)
 
@@ -286,16 +298,6 @@ install_dependencies <- function(path = '.'){
 
   message("Running: utils::install.packages(deps)")
   utils::install.packages(deps)
-
-  # The following should not be needed if the remote is part of the universe
-  # However we install it anyway to avoid race conditions if the remote was just added
-  remotes <- desc$Remotes
-  if(length(remotes)){
-    try({
-      remotes_repos <- split_by_comma(remotes)
-      lapply(remotes_repos, function(x){remotes::install_github(x, upgrade = FALSE)})
-    })
-  }
 
   # Store recursive runtime and checktime dependencies
   harddeps <- remotes::local_package_deps()
